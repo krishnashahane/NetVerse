@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Netverse — Galaxy of the Internet</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      color: #e0e0e0;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      overflow: hidden;
+    }
+
+    #ui {
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 10;
+      padding: 20px;
+      width: 340px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, #6ee7ff, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input, select {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #e0e0e0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #6ee7ff; }
+    input::placeholder { color: rgba(255,255,255,0.3); }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+    .row input, .row select { flex: 1; }
+
+    button {
+      background: linear-gradient(135deg, #6ee7ff, #a78bfa);
+      border: none;
+      color: #000;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    button.stop { background: linear-gradient(135deg, #f472b6, #ef4444); color: #fff; }
+
+    #status {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 6px;
+    }
+    #status .count { color: #6ee7ff; font-weight: 600; }
+
+    #tooltip {
+      position: fixed;
+      z-index: 20;
+      background: rgba(10, 10, 30, 0.92);
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(12px);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      pointer-events: none;
+      display: none;
+      max-width: 320px;
+    }
+    #tooltip .tt-title { color: #fff; font-weight: 600; margin-bottom: 3px; }
+    #tooltip .tt-url { color: #6ee7ff; word-break: break-all; }
+    #tooltip .tt-meta { color: rgba(255,255,255,0.4); margin-top: 3px; }
+
+    #legend {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.7;
+    }
+    #legend b { color: rgba(255,255,255,0.6); }
+
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <h1>NETVERSE</h1>
+    <div class="controls">
+      <input id="urlInput" type="text" placeholder="Enter a URL to explore..." value="https://example.com" />
+      <div class="row">
+        <input id="depthInput" type="number" min="1" max="4" value="2" title="Crawl depth" placeholder="Depth" />
+        <input id="pagesInput" type="number" min="10" max="300" value="60" title="Max pages" placeholder="Max pages" />
+      </div>
+      <div class="row">
+        <button id="startBtn" onclick="startCrawl()">LAUNCH</button>
+        <button id="stopBtn" class="stop" onclick="stopCrawl()" style="display:none">STOP</button>
+      </div>
+      <div id="status">Ready to explore the universe.</div>
+    </div>
+  </div>
+
+  <div id="tooltip">
+    <div class="tt-title"></div>
+    <div class="tt-url"></div>
+    <div class="tt-meta"></div>
+  </div>
+
+  <div id="legend">
+    <b>Scroll</b> zoom &nbsp;|&nbsp; <b>Drag</b> orbit &nbsp;|&nbsp; <b>Click</b> node to visit<br>
+    Node size = link count &nbsp;|&nbsp; Color = domain cluster
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+
+    // ── Scene setup ─────────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 4000);
+    camera.position.set(0, 80, 200);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 20;
+    controls.maxDistance = 1500;
+
+    // Bloom
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(innerWidth, innerHeight), 1.2, 0.6, 0.3
+    );
+    composer.addPass(bloom);
+
+    // Stars background
+    const starGeo = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(6000 * 3);
+    for (let i = 0; i < starPositions.length; i++) {
+      starPositions[i] = (Math.random() - 0.5) * 3000;
+    }
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0.6 });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    // ── Galaxy graph state ──────────────────────────────────────────
+    let graphNodes = [];   // mirrored from server
+    let graphEdges = [];
+    let positions = [];    // 3D positions per node id
+    let velocities = [];
+    let domainColors = {}; // domain -> THREE.Color
+    let colorIndex = 0;
+
+    const PALETTE = [
+      0x6ee7ff, 0xa78bfa, 0xf472b6, 0x34d399, 0xfbbf24,
+      0xf87171, 0x60a5fa, 0xc084fc, 0x2dd4bf, 0xfb923c,
+      0xe879f9, 0x4ade80, 0xf9a8d4, 0x38bdf8, 0xa3e635,
+    ];
+
+    function colorForDomain(domain) {
+      if (!domainColors[domain]) {
+        domainColors[domain] = new THREE.Color(PALETTE[colorIndex % PALETTE.length]);
+        colorIndex++;
+      }
+      return domainColors[domain];
+    }
+
+    // ── Node and edge meshes ────────────────────────────────────────
+    let pointsMesh = null;
+    let edgesMesh = null;
+    const raycaster = new THREE.Raycaster();
+    raycaster.params.Points.threshold = 3;
+    const mouse = new THREE.Vector2();
+    let hoveredNode = null;
+
+    function initPosition(id, depth) {
+      // Spiral galaxy distribution
+      const angle = id * 2.39996 + depth * 1.2; // golden angle
+      const radius = 20 + depth * 40 + Math.random() * 30;
+      const armOffset = Math.sin(angle * 2) * 15;
+      positions[id] = new THREE.Vector3(
+        Math.cos(angle) * (radius + armOffset) + (Math.random() - 0.5) * 15,
+        (Math.random() - 0.5) * 30 - depth * 5,
+        Math.sin(angle) * (radius + armOffset) + (Math.random() - 0.5) * 15
+      );
+      velocities[id] = new THREE.Vector3();
+    }
+
+    function buildPointsMesh() {
+      if (pointsMesh) scene.remove(pointsMesh);
+
+      const count = graphNodes.length;
+      if (count === 0) return;
+
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+
+      for (let i = 0; i < count; i++) {
+        const n = graphNodes[i];
+        if (!positions[n.id]) initPosition(n.id, n.depth);
+        const p = positions[n.id];
+        pos[i * 3] = p.x;
+        pos[i * 3 + 1] = p.y;
+        pos[i * 3 + 2] = p.z;
+
+        const c = colorForDomain(n.domain);
+        colors[i * 3] = c.r;
+        colors[i * 3 + 1] = c.g;
+        colors[i * 3 + 2] = c.b;
+
+        sizes[i] = Math.min(3 + (n.linkCount || 0) * 0.8, 14);
+      }
+
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: `
+          attribute float size;
+          varying vec3 vColor;
+          uniform float uTime;
+          void main() {
+            vColor = color;
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = size * (250.0 / -mv.z);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          void main() {
+            float d = length(gl_PointCoord - 0.5);
+            if (d > 0.5) discard;
+            float glow = 1.0 - smoothstep(0.0, 0.5, d);
+            gl_FragColor = vec4(vColor * glow, glow);
+          }
+        `,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      pointsMesh = new THREE.Points(geo, mat);
+      scene.add(pointsMesh);
+    }
+
+    function buildEdgesMesh() {
+      if (edgesMesh) scene.remove(edgesMesh);
+      if (graphEdges.length === 0) return;
+
+      const geo = new THREE.BufferGeometry();
+      const verts = [];
+      const colors = [];
+
+      for (const e of graphEdges) {
+        const pS = positions[e.source];
+        const pT = positions[e.target];
+        if (!pS || !pT) continue;
+        verts.push(pS.x, pS.y, pS.z, pT.x, pT.y, pT.z);
+
+        const sNode = graphNodes.find((n) => n.id === e.source);
+        const c = sNode ? colorForDomain(sNode.domain) : new THREE.Color(0x333333);
+        colors.push(c.r, c.g, c.b, c.r * 0.3, c.g * 0.3, c.b * 0.3);
+      }
+
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+
+      const mat = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.15,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      edgesMesh = new THREE.LineSegments(geo, mat);
+      scene.add(edgesMesh);
+    }
+
+    // ── Force-directed layout (simple) ──────────────────────────────
+    function applyForces() {
+      const count = graphNodes.length;
+      if (count < 2) return;
+
+      // Repulsion between all nodes
+      for (let i = 0; i < count; i++) {
+        const a = graphNodes[i];
+        const pA = positions[a.id];
+        if (!pA) continue;
+        for (let j = i + 1; j < count; j++) {
+          const b = graphNodes[j];
+          const pB = positions[b.id];
+          if (!pB) continue;
+
+          const dx = pA.x - pB.x, dy = pA.y - pB.y, dz = pA.z - pB.z;
+          const distSq = dx * dx + dy * dy + dz * dz + 1;
+          const force = 200 / distSq;
+
+          const vA = velocities[a.id], vB = velocities[b.id];
+          vA.x += dx * force; vA.y += dy * force; vA.z += dz * force;
+          vB.x -= dx * force; vB.y -= dy * force; vB.z -= dz * force;
+        }
+      }
+
+      // Attraction along edges
+      for (const e of graphEdges) {
+        const pS = positions[e.source], pT = positions[e.target];
+        const vS = velocities[e.source], vT = velocities[e.target];
+        if (!pS || !pT || !vS || !vT) continue;
+
+        const dx = pT.x - pS.x, dy = pT.y - pS.y, dz = pT.z - pS.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) + 0.1;
+        const idealDist = 30;
+        const force = (dist - idealDist) * 0.003;
+
+        vS.x += dx / dist * force; vS.y += dy / dist * force; vS.z += dz / dist * force;
+        vT.x -= dx / dist * force; vT.y -= dy / dist * force; vT.z -= dz / dist * force;
+      }
+
+      // Apply velocities with damping
+      for (let i = 0; i < count; i++) {
+        const n = graphNodes[i];
+        const p = positions[n.id], v = velocities[n.id];
+        if (!p || !v) continue;
+        v.multiplyScalar(0.85);
+        p.add(v);
+      }
+    }
+
+    // ── Polling ─────────────────────────────────────────────────────
+    let polling = false;
+
+    async function pollGraph() {
+      try {
+        const res = await fetch("/api/graph");
+        const data = await res.json();
+
+        // Add new nodes
+        for (const n of data.nodes) {
+          if (!graphNodes.find((g) => g.id === n.id)) {
+            graphNodes.push(n);
+            initPosition(n.id, n.depth);
+          } else {
+            // update linkCount
+            const existing = graphNodes.find((g) => g.id === n.id);
+            existing.linkCount = n.linkCount;
+            existing.title = n.title;
+          }
+        }
+        graphEdges = data.edges;
+
+        buildPointsMesh();
+        buildEdgesMesh();
+
+        const statusEl = document.getElementById("status");
+        if (data.crawling) {
+          statusEl.innerHTML = `Crawling... <span class="count">${data.visited}</span> pages discovered`;
+          setTimeout(pollGraph, 800);
+        } else if (data.visited > 0) {
+          statusEl.innerHTML = `Complete — <span class="count">${data.visited}</span> pages mapped, <span class="count">${data.edges.length}</span> connections`;
+          document.getElementById("startBtn").style.display = "";
+          document.getElementById("stopBtn").style.display = "none";
+          polling = false;
+        }
+      } catch (err) {
+        console.error("Poll error:", err);
+        if (polling) setTimeout(pollGraph, 2000);
+      }
+    }
+
+    // ── Controls ────────────────────────────────────────────────────
+    window.startCrawl = async function () {
+      const url = document.getElementById("urlInput").value.trim();
+      if (!url) return;
+
+      // Reset
+      graphNodes = [];
+      graphEdges = [];
+      positions = [];
+      velocities = [];
+      domainColors = {};
+      colorIndex = 0;
+      if (pointsMesh) { scene.remove(pointsMesh); pointsMesh = null; }
+      if (edgesMesh) { scene.remove(edgesMesh); edgesMesh = null; }
+
+      document.getElementById("startBtn").style.display = "none";
+      document.getElementById("stopBtn").style.display = "";
+      document.getElementById("status").innerHTML = "Initiating crawl...";
+
+      await fetch("/api/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url,
+          depth: parseInt(document.getElementById("depthInput").value) || 2,
+          pages: parseInt(document.getElementById("pagesInput").value) || 60,
+        }),
+      });
+
+      polling = true;
+      setTimeout(pollGraph, 500);
+    };
+
+    window.stopCrawl = async function () {
+      await fetch("/api/stop", { method: "POST" });
+      polling = false;
+      document.getElementById("startBtn").style.display = "";
+      document.getElementById("stopBtn").style.display = "none";
+      document.getElementById("status").innerHTML = "Crawl stopped.";
+    };
+
+    // ── Mouse interaction ───────────────────────────────────────────
+    const tooltip = document.getElementById("tooltip");
+
+    renderer.domElement.addEventListener("mousemove", (e) => {
+      mouse.x = (e.clientX / innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+
+      if (pointsMesh && graphNodes.length > 0) {
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(pointsMesh);
+        if (hits.length > 0) {
+          const idx = hits[0].index;
+          hoveredNode = graphNodes[idx];
+          tooltip.style.display = "block";
+          tooltip.style.left = e.clientX + 15 + "px";
+          tooltip.style.top = e.clientY + 15 + "px";
+          tooltip.querySelector(".tt-title").textContent = hoveredNode.title;
+          tooltip.querySelector(".tt-url").textContent = hoveredNode.url;
+          tooltip.querySelector(".tt-meta").textContent =
+            `Depth: ${hoveredNode.depth} · Links: ${hoveredNode.linkCount}`;
+          renderer.domElement.style.cursor = "pointer";
+        } else {
+          hoveredNode = null;
+          tooltip.style.display = "none";
+          renderer.domElement.style.cursor = "grab";
+        }
+      }
+    });
+
+    renderer.domElement.addEventListener("click", () => {
+      if (hoveredNode) {
+        window.open(hoveredNode.url, "_blank");
+      }
+    });
+
+    // ── Resize ──────────────────────────────────────────────────────
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+    });
+
+    // ── Animate ─────────────────────────────────────────────────────
+    let frame = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      frame++;
+
+      controls.update();
+
+      // Apply forces every few frames to save CPU
+      if (frame % 3 === 0 && graphNodes.length > 1) {
+        applyForces();
+
+        // Update point positions
+        if (pointsMesh) {
+          const posAttr = pointsMesh.geometry.getAttribute("position");
+          const sizeAttr = pointsMesh.geometry.getAttribute("size");
+          for (let i = 0; i < graphNodes.length; i++) {
+            const p = positions[graphNodes[i].id];
+            if (p) {
+              posAttr.setXYZ(i, p.x, p.y, p.z);
+            }
+            sizeAttr.setX(i, Math.min(3 + (graphNodes[i].linkCount || 0) * 0.8, 14));
+          }
+          posAttr.needsUpdate = true;
+          sizeAttr.needsUpdate = true;
+        }
+
+        // Update edges
+        if (edgesMesh) {
+          const ePos = edgesMesh.geometry.getAttribute("position");
+          let vi = 0;
+          for (const e of graphEdges) {
+            const pS = positions[e.source], pT = positions[e.target];
+            if (pS && pT) {
+              ePos.setXYZ(vi, pS.x, pS.y, pS.z); vi++;
+              ePos.setXYZ(vi, pT.x, pT.y, pT.z); vi++;
+            } else {
+              vi += 2;
+            }
+          }
+          ePos.needsUpdate = true;
+        }
+      }
+
+      // Slow galaxy rotation
+      if (pointsMesh) pointsMesh.rotation.y += 0.0003;
+      if (edgesMesh) edgesMesh.rotation.y += 0.0003;
+
+      composer.render();
+    }
+
+    animate();
+  </script>
+</body>
+</html>
