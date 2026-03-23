@@ -19,16 +19,24 @@
       top: 0; left: 0;
       z-index: 10;
       padding: 20px;
-      width: 340px;
+      width: 360px;
     }
 
     h1 {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       background: linear-gradient(135deg, #6ee7ff, #a78bfa, #f472b6);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 2px;
+      text-transform: uppercase;
       margin-bottom: 16px;
     }
 
@@ -47,9 +55,9 @@
       font-size: 13px;
       font-family: inherit;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    input:focus { border-color: #6ee7ff; }
+    input:focus { border-color: #6ee7ff; box-shadow: 0 0 12px rgba(110,231,255,0.15); }
     input::placeholder { color: rgba(255,255,255,0.3); }
 
     .row {
@@ -69,10 +77,20 @@
       font-family: inherit;
       cursor: pointer;
       letter-spacing: 1px;
-      transition: opacity 0.2s;
+      transition: opacity 0.2s, transform 0.1s;
     }
-    button:hover { opacity: 0.85; }
+    button:hover { opacity: 0.85; transform: scale(1.02); }
+    button:active { transform: scale(0.98); }
     button.stop { background: linear-gradient(135deg, #f472b6, #ef4444); color: #fff; }
+    button.secondary {
+      background: rgba(255,255,255,0.08);
+      color: #e0e0e0;
+      font-weight: 500;
+      font-size: 11px;
+      padding: 6px 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    button.secondary:hover { background: rgba(255,255,255,0.14); }
 
     #status {
       font-size: 12px;
@@ -81,22 +99,90 @@
     }
     #status .count { color: #6ee7ff; font-weight: 600; }
 
+    /* Search filter */
+    #searchBox {
+      margin-top: 8px;
+    }
+    #searchBox input {
+      width: 100%;
+      font-size: 11px;
+      padding: 7px 10px;
+    }
+
+    /* Stats panel */
+    #statsPanel {
+      margin-top: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px;
+      display: none;
+    }
+    #statsPanel h3 {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .stat-label { color: rgba(255,255,255,0.4); }
+    .stat-value { color: #6ee7ff; font-weight: 600; }
+    .stat-value.warn { color: #fbbf24; }
+    .stat-value.error { color: #f87171; }
+
+    /* Domain legend */
+    #domainLegend {
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+    }
+    #domainLegend::-webkit-scrollbar { width: 4px; }
+    #domainLegend::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    .domain-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 3px 0;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .domain-item:hover { opacity: 1; }
+    .domain-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .domain-name { color: rgba(255,255,255,0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .domain-count { color: rgba(255,255,255,0.3); margin-left: auto; flex-shrink: 0; }
+
     #tooltip {
       position: fixed;
       z-index: 20;
-      background: rgba(10, 10, 30, 0.92);
-      border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(12px);
-      padding: 10px 14px;
-      border-radius: 8px;
+      background: rgba(10, 10, 30, 0.95);
+      border: 1px solid rgba(110,231,255,0.25);
+      backdrop-filter: blur(16px);
+      padding: 12px 16px;
+      border-radius: 10px;
       font-size: 12px;
       pointer-events: none;
       display: none;
-      max-width: 320px;
+      max-width: 340px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
-    #tooltip .tt-title { color: #fff; font-weight: 600; margin-bottom: 3px; }
-    #tooltip .tt-url { color: #6ee7ff; word-break: break-all; }
-    #tooltip .tt-meta { color: rgba(255,255,255,0.4); margin-top: 3px; }
+    #tooltip .tt-title { color: #fff; font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+    #tooltip .tt-url { color: #6ee7ff; word-break: break-all; font-size: 11px; }
+    #tooltip .tt-desc { color: rgba(255,255,255,0.5); margin-top: 4px; font-size: 11px; }
+    #tooltip .tt-meta { color: rgba(255,255,255,0.35); margin-top: 4px; font-size: 10px; }
 
     #legend {
       position: fixed;
@@ -104,10 +190,47 @@
       left: 20px;
       z-index: 10;
       font-size: 11px;
-      color: rgba(255,255,255,0.4);
-      line-height: 1.7;
+      color: rgba(255,255,255,0.35);
+      line-height: 1.8;
     }
-    #legend b { color: rgba(255,255,255,0.6); }
+    #legend b { color: rgba(255,255,255,0.55); }
+    #legend kbd {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 10px;
+      font-family: inherit;
+    }
+
+    /* Minimap */
+    #minimap {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 160px;
+      height: 160px;
+      background: rgba(10,10,30,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    /* Loading pulse animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    .crawling-indicator {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: #6ee7ff;
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
 
     canvas { display: block; }
   </style>
@@ -115,6 +238,7 @@
 <body>
   <div id="ui">
     <h1>NETVERSE</h1>
+    <div class="subtitle">3D Web Galaxy Explorer</div>
     <div class="controls">
       <input id="urlInput" type="text" placeholder="Enter a URL to explore..." value="https://example.com" />
       <div class="row">
@@ -124,21 +248,40 @@
       <div class="row">
         <button id="startBtn" onclick="startCrawl()">LAUNCH</button>
         <button id="stopBtn" class="stop" onclick="stopCrawl()" style="display:none">STOP</button>
+        <button id="resetViewBtn" class="secondary" onclick="resetCamera()">RESET VIEW</button>
       </div>
       <div id="status">Ready to explore the universe.</div>
+      <div id="searchBox">
+        <input id="searchInput" type="text" placeholder="Search nodes..." oninput="filterNodes(this.value)" />
+      </div>
     </div>
+
+    <div id="statsPanel">
+      <h3>Statistics</h3>
+      <div class="stat-row"><span class="stat-label">Nodes</span><span class="stat-value" id="statNodes">0</span></div>
+      <div class="stat-row"><span class="stat-label">Edges</span><span class="stat-value" id="statEdges">0</span></div>
+      <div class="stat-row"><span class="stat-label">Domains</span><span class="stat-value" id="statDomains">0</span></div>
+      <div class="stat-row"><span class="stat-label">Errors</span><span class="stat-value error" id="statErrors">0</span></div>
+      <div class="stat-row"><span class="stat-label">Elapsed</span><span class="stat-value warn" id="statElapsed">-</span></div>
+    </div>
+
+    <div id="domainLegend"></div>
   </div>
 
   <div id="tooltip">
     <div class="tt-title"></div>
     <div class="tt-url"></div>
+    <div class="tt-desc"></div>
     <div class="tt-meta"></div>
   </div>
 
   <div id="legend">
-    <b>Scroll</b> zoom &nbsp;|&nbsp; <b>Drag</b> orbit &nbsp;|&nbsp; <b>Click</b> node to visit<br>
-    Node size = link count &nbsp;|&nbsp; Color = domain cluster
+    <b>Scroll</b> zoom &nbsp;|&nbsp; <b>Drag</b> orbit &nbsp;|&nbsp; <b>Click</b> visit node<br>
+    <kbd>F</kbd> focus selected &nbsp;|&nbsp; <kbd>R</kbd> reset view &nbsp;|&nbsp; <kbd>H</kbd> toggle UI<br>
+    Node size = link count &nbsp;|&nbsp; Color = domain
   </div>
+
+  <div id="minimap"><canvas id="minimapCanvas"></canvas></div>
 
   <script type="importmap">
     {
@@ -158,50 +301,118 @@
 
     // ── Scene setup ─────────────────────────────────────────────────
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 4000);
-    camera.position.set(0, 80, 200);
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 6000);
+    camera.position.set(0, 100, 280);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(innerWidth, innerHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 20;
-    controls.maxDistance = 1500;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 15;
+    controls.maxDistance = 2000;
+    controls.autoRotate = false;
+    controls.autoRotateSpeed = 0.3;
 
     // Bloom
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
     const bloom = new UnrealBloomPass(
-      new THREE.Vector2(innerWidth, innerHeight), 1.2, 0.6, 0.3
+      new THREE.Vector2(innerWidth, innerHeight), 1.3, 0.5, 0.25
     );
     composer.addPass(bloom);
 
-    // Stars background
-    const starGeo = new THREE.BufferGeometry();
-    const starPositions = new Float32Array(6000 * 3);
-    for (let i = 0; i < starPositions.length; i++) {
-      starPositions[i] = (Math.random() - 0.5) * 3000;
+    // ── Stars background (layered for depth) ────────────────────────
+    function createStarField(count, spread, size, opacity) {
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      for (let i = 0; i < pos.length; i++) {
+        pos[i] = (Math.random() - 0.5) * spread;
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({ color: 0xffffff, size, transparent: true, opacity });
+      return new THREE.Points(geo, mat);
     }
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0.6 });
-    scene.add(new THREE.Points(starGeo, starMat));
+    scene.add(createStarField(8000, 4000, 0.3, 0.5));
+    scene.add(createStarField(3000, 3000, 0.8, 0.3));
+    scene.add(createStarField(500, 2000, 1.5, 0.15));
+
+    // ── Nebula cloud ────────────────────────────────────────────────
+    function createNebula() {
+      const geo = new THREE.BufferGeometry();
+      const count = 200;
+      const pos = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+      const nebulaColors = [
+        new THREE.Color(0x6ee7ff).multiplyScalar(0.15),
+        new THREE.Color(0xa78bfa).multiplyScalar(0.12),
+        new THREE.Color(0xf472b6).multiplyScalar(0.1),
+      ];
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 100 + Math.random() * 400;
+        pos[i*3] = Math.cos(angle) * radius + (Math.random()-0.5) * 100;
+        pos[i*3+1] = (Math.random()-0.5) * 80;
+        pos[i*3+2] = Math.sin(angle) * radius + (Math.random()-0.5) * 100;
+        const c = nebulaColors[i % nebulaColors.length];
+        colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+        sizes[i] = 30 + Math.random() * 60;
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: `
+          attribute float size;
+          varying vec3 vColor;
+          void main() {
+            vColor = color;
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = size * (300.0 / -mv.z);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          void main() {
+            float d = length(gl_PointCoord - 0.5);
+            float alpha = smoothstep(0.5, 0.0, d) * 0.15;
+            gl_FragColor = vec4(vColor, alpha);
+          }
+        `,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      return new THREE.Points(geo, mat);
+    }
+    scene.add(createNebula());
 
     // ── Galaxy graph state ──────────────────────────────────────────
-    let graphNodes = [];   // mirrored from server
+    let graphNodes = [];
     let graphEdges = [];
-    let positions = [];    // 3D positions per node id
+    const nodeById = new Map();   // id -> node (fast lookup)
+    let positions = [];
     let velocities = [];
-    let domainColors = {}; // domain -> THREE.Color
+    let domainColors = {};
     let colorIndex = 0;
+    let highlightFilter = "";
+    let highlightedNodes = new Set();
 
     const PALETTE = [
       0x6ee7ff, 0xa78bfa, 0xf472b6, 0x34d399, 0xfbbf24,
       0xf87171, 0x60a5fa, 0xc084fc, 0x2dd4bf, 0xfb923c,
       0xe879f9, 0x4ade80, 0xf9a8d4, 0x38bdf8, 0xa3e635,
+      0x818cf8, 0xfca5a5, 0x67e8f9, 0xd8b4fe, 0x86efac,
     ];
 
     function colorForDomain(domain) {
@@ -215,26 +426,30 @@
     // ── Node and edge meshes ────────────────────────────────────────
     let pointsMesh = null;
     let edgesMesh = null;
+    let glowMesh = null;
     const raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 3;
     const mouse = new THREE.Vector2();
     let hoveredNode = null;
+    let isDragging = false;
 
     function initPosition(id, depth) {
-      // Spiral galaxy distribution
-      const angle = id * 2.39996 + depth * 1.2; // golden angle
-      const radius = 20 + depth * 40 + Math.random() * 30;
-      const armOffset = Math.sin(angle * 2) * 15;
+      const angle = id * 2.39996 + depth * 1.2;
+      const radius = 25 + depth * 45 + Math.random() * 35;
+      const armOffset = Math.sin(angle * 2) * 18;
+      const spiralTightness = 0.3;
+      const spiralR = radius + armOffset + id * spiralTightness;
       positions[id] = new THREE.Vector3(
-        Math.cos(angle) * (radius + armOffset) + (Math.random() - 0.5) * 15,
-        (Math.random() - 0.5) * 30 - depth * 5,
-        Math.sin(angle) * (radius + armOffset) + (Math.random() - 0.5) * 15
+        Math.cos(angle) * spiralR + (Math.random() - 0.5) * 18,
+        (Math.random() - 0.5) * 35 - depth * 6,
+        Math.sin(angle) * spiralR + (Math.random() - 0.5) * 18
       );
       velocities[id] = new THREE.Vector3();
     }
 
     function buildPointsMesh() {
       if (pointsMesh) scene.remove(pointsMesh);
+      if (glowMesh) scene.remove(glowMesh);
 
       const count = graphNodes.length;
       if (count === 0) return;
@@ -253,11 +468,12 @@
         pos[i * 3 + 2] = p.z;
 
         const c = colorForDomain(n.domain);
-        colors[i * 3] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
+        const dimFactor = highlightFilter && !highlightedNodes.has(n.id) ? 0.15 : 1.0;
+        colors[i * 3] = c.r * dimFactor;
+        colors[i * 3 + 1] = c.g * dimFactor;
+        colors[i * 3 + 2] = c.b * dimFactor;
 
-        sizes[i] = Math.min(3 + (n.linkCount || 0) * 0.8, 14);
+        sizes[i] = Math.min(3.5 + (n.linkCount || 0) * 0.9, 16);
       }
 
       geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -269,21 +485,26 @@
         vertexShader: `
           attribute float size;
           varying vec3 vColor;
+          varying float vSize;
           uniform float uTime;
           void main() {
             vColor = color;
+            vSize = size;
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = size * (250.0 / -mv.z);
+            gl_PointSize = size * (280.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
           }
         `,
         fragmentShader: `
           varying vec3 vColor;
+          varying float vSize;
           void main() {
             float d = length(gl_PointCoord - 0.5);
             if (d > 0.5) discard;
+            float core = 1.0 - smoothstep(0.0, 0.2, d);
             float glow = 1.0 - smoothstep(0.0, 0.5, d);
-            gl_FragColor = vec4(vColor * glow, glow);
+            vec3 col = mix(vColor, vec3(1.0), core * 0.5);
+            gl_FragColor = vec4(col * glow, glow);
           }
         `,
         vertexColors: true,
@@ -294,6 +515,43 @@
 
       pointsMesh = new THREE.Points(geo, mat);
       scene.add(pointsMesh);
+
+      // Outer glow layer
+      const glowGeo = geo.clone();
+      const glowSizes = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        glowSizes[i] = sizes[i] * 2.5;
+      }
+      glowGeo.setAttribute("size", new THREE.BufferAttribute(glowSizes, 1));
+
+      const glowMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          attribute float size;
+          varying vec3 vColor;
+          void main() {
+            vColor = color;
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = size * (280.0 / -mv.z);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          void main() {
+            float d = length(gl_PointCoord - 0.5);
+            if (d > 0.5) discard;
+            float glow = 1.0 - smoothstep(0.0, 0.5, d);
+            gl_FragColor = vec4(vColor * 0.3, glow * 0.08);
+          }
+        `,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      glowMesh = new THREE.Points(glowGeo, glowMat);
+      scene.add(glowMesh);
     }
 
     function buildEdgesMesh() {
@@ -310,9 +568,10 @@
         if (!pS || !pT) continue;
         verts.push(pS.x, pS.y, pS.z, pT.x, pT.y, pT.z);
 
-        const sNode = graphNodes.find((n) => n.id === e.source);
+        const sNode = nodeById.get(e.source);
         const c = sNode ? colorForDomain(sNode.domain) : new THREE.Color(0x333333);
-        colors.push(c.r, c.g, c.b, c.r * 0.3, c.g * 0.3, c.b * 0.3);
+        const dimFactor = highlightFilter && !(highlightedNodes.has(e.source) && highlightedNodes.has(e.target)) ? 0.05 : 1.0;
+        colors.push(c.r*dimFactor, c.g*dimFactor, c.b*dimFactor, c.r*0.2*dimFactor, c.g*0.2*dimFactor, c.b*0.2*dimFactor);
       }
 
       geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
@@ -321,7 +580,7 @@
       const mat = new THREE.LineBasicMaterial({
         vertexColors: true,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.18,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
@@ -330,26 +589,39 @@
       scene.add(edgesMesh);
     }
 
-    // ── Force-directed layout (simple) ──────────────────────────────
+    // ── Force-directed layout (improved) ────────────────────────────
     function applyForces() {
       const count = graphNodes.length;
       if (count < 2) return;
+
+      const repulsionStrength = 250;
+      const attractionStrength = 0.004;
+      const centerGravity = 0.001;
+      const dampingFactor = 0.82;
 
       // Repulsion between all nodes
       for (let i = 0; i < count; i++) {
         const a = graphNodes[i];
         const pA = positions[a.id];
         if (!pA) continue;
+
+        // Center gravity (prevents graph from drifting)
+        const vA = velocities[a.id];
+        vA.x -= pA.x * centerGravity;
+        vA.y -= pA.y * centerGravity;
+        vA.z -= pA.z * centerGravity;
+
         for (let j = i + 1; j < count; j++) {
           const b = graphNodes[j];
           const pB = positions[b.id];
           if (!pB) continue;
 
           const dx = pA.x - pB.x, dy = pA.y - pB.y, dz = pA.z - pB.z;
-          const distSq = dx * dx + dy * dy + dz * dz + 1;
-          const force = 200 / distSq;
+          const distSq = dx * dx + dy * dy + dz * dz;
+          if (distSq < 0.01) continue; // skip overlapping nodes
+          const force = repulsionStrength / (distSq + 1);
 
-          const vA = velocities[a.id], vB = velocities[b.id];
+          const vB = velocities[b.id];
           vA.x += dx * force; vA.y += dy * force; vA.z += dz * force;
           vB.x -= dx * force; vB.y -= dy * force; vB.z -= dz * force;
         }
@@ -363,19 +635,24 @@
 
         const dx = pT.x - pS.x, dy = pT.y - pS.y, dz = pT.z - pS.z;
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) + 0.1;
-        const idealDist = 30;
-        const force = (dist - idealDist) * 0.003;
+        const idealDist = 35;
+        const force = (dist - idealDist) * attractionStrength;
 
-        vS.x += dx / dist * force; vS.y += dy / dist * force; vS.z += dz / dist * force;
-        vT.x -= dx / dist * force; vT.y -= dy / dist * force; vT.z -= dz / dist * force;
+        const fx = dx / dist * force, fy = dy / dist * force, fz = dz / dist * force;
+        vS.x += fx; vS.y += fy; vS.z += fz;
+        vT.x -= fx; vT.y -= fy; vT.z -= fz;
       }
 
-      // Apply velocities with damping
+      // Apply velocities with damping and max speed
+      const maxSpeed = 5;
       for (let i = 0; i < count; i++) {
         const n = graphNodes[i];
         const p = positions[n.id], v = velocities[n.id];
         if (!p || !v) continue;
-        v.multiplyScalar(0.85);
+        v.multiplyScalar(dampingFactor);
+        // Clamp speed
+        const speed = v.length();
+        if (speed > maxSpeed) v.multiplyScalar(maxSpeed / speed);
         p.add(v);
       }
     }
@@ -388,32 +665,37 @@
         const res = await fetch("/api/graph");
         const data = await res.json();
 
-        // Add new nodes
+        // Add new nodes using Map for fast lookup
         for (const n of data.nodes) {
-          if (!graphNodes.find((g) => g.id === n.id)) {
+          if (!nodeById.has(n.id)) {
             graphNodes.push(n);
+            nodeById.set(n.id, n);
             initPosition(n.id, n.depth);
           } else {
-            // update linkCount
-            const existing = graphNodes.find((g) => g.id === n.id);
+            const existing = nodeById.get(n.id);
             existing.linkCount = n.linkCount;
             existing.title = n.title;
+            if (n.description) existing.description = n.description;
           }
         }
         graphEdges = data.edges;
 
+        if (highlightFilter) applyFilter(highlightFilter);
         buildPointsMesh();
         buildEdgesMesh();
+        updateStats(data);
+        updateDomainLegend();
 
         const statusEl = document.getElementById("status");
         if (data.crawling) {
-          statusEl.innerHTML = `Crawling... <span class="count">${data.visited}</span> pages discovered`;
+          statusEl.innerHTML = `<span class="crawling-indicator"></span>Crawling... <span class="count">${data.visited}</span> pages discovered`;
           setTimeout(pollGraph, 800);
         } else if (data.visited > 0) {
           statusEl.innerHTML = `Complete — <span class="count">${data.visited}</span> pages mapped, <span class="count">${data.edges.length}</span> connections`;
           document.getElementById("startBtn").style.display = "";
           document.getElementById("stopBtn").style.display = "none";
           polling = false;
+          controls.autoRotate = true;
         }
       } catch (err) {
         console.error("Poll error:", err);
@@ -421,26 +703,113 @@
       }
     }
 
+    function updateStats(data) {
+      const panel = document.getElementById("statsPanel");
+      panel.style.display = "block";
+      document.getElementById("statNodes").textContent = data.nodes.length;
+      document.getElementById("statEdges").textContent = data.edges.length;
+
+      const domains = new Set(data.nodes.map(n => n.domain));
+      document.getElementById("statDomains").textContent = domains.size;
+
+      // Fetch stats for errors & elapsed
+      fetch("/api/stats").then(r => r.json()).then(stats => {
+        document.getElementById("statErrors").textContent = stats.errors;
+        if (stats.elapsed > 0) {
+          const secs = Math.floor(stats.elapsed / 1000);
+          document.getElementById("statElapsed").textContent = secs < 60 ? `${secs}s` : `${Math.floor(secs/60)}m ${secs%60}s`;
+        }
+      }).catch(() => {});
+    }
+
+    function updateDomainLegend() {
+      const container = document.getElementById("domainLegend");
+      if (graphNodes.length === 0) { container.style.display = "none"; return; }
+      container.style.display = "block";
+
+      const domainCounts = {};
+      for (const n of graphNodes) {
+        domainCounts[n.domain] = (domainCounts[n.domain] || 0) + 1;
+      }
+
+      const sorted = Object.entries(domainCounts).sort((a,b) => b[1] - a[1]).slice(0, 15);
+
+      container.innerHTML = sorted.map(([domain, count]) => {
+        const c = colorForDomain(domain);
+        const hex = '#' + c.getHexString();
+        return `<div class="domain-item" onclick="window.filterByDomain('${domain}')">
+          <div class="domain-dot" style="background:${hex}"></div>
+          <span class="domain-name">${domain}</span>
+          <span class="domain-count">${count}</span>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Search / Filter ─────────────────────────────────────────────
+    function applyFilter(query) {
+      highlightFilter = query;
+      highlightedNodes.clear();
+      if (!query) return;
+
+      const q = query.toLowerCase();
+      for (const n of graphNodes) {
+        if (n.title.toLowerCase().includes(q) || n.url.toLowerCase().includes(q) || n.domain.toLowerCase().includes(q)) {
+          highlightedNodes.add(n.id);
+        }
+      }
+    }
+
+    window.filterNodes = function(query) {
+      applyFilter(query);
+      buildPointsMesh();
+      buildEdgesMesh();
+    };
+
+    window.filterByDomain = function(domain) {
+      const input = document.getElementById("searchInput");
+      if (input.value === domain) {
+        input.value = "";
+        applyFilter("");
+      } else {
+        input.value = domain;
+        applyFilter(domain);
+      }
+      buildPointsMesh();
+      buildEdgesMesh();
+    };
+
     // ── Controls ────────────────────────────────────────────────────
     window.startCrawl = async function () {
       const url = document.getElementById("urlInput").value.trim();
       if (!url) return;
 
+      // Basic URL validation
+      try { new URL(url); } catch {
+        document.getElementById("status").innerHTML = '<span style="color:#f87171">Invalid URL format</span>';
+        return;
+      }
+
       // Reset
       graphNodes = [];
       graphEdges = [];
+      nodeById.clear();
       positions = [];
       velocities = [];
       domainColors = {};
       colorIndex = 0;
+      highlightFilter = "";
+      highlightedNodes.clear();
+      document.getElementById("searchInput").value = "";
       if (pointsMesh) { scene.remove(pointsMesh); pointsMesh = null; }
       if (edgesMesh) { scene.remove(edgesMesh); edgesMesh = null; }
+      if (glowMesh) { scene.remove(glowMesh); glowMesh = null; }
 
       document.getElementById("startBtn").style.display = "none";
       document.getElementById("stopBtn").style.display = "";
-      document.getElementById("status").innerHTML = "Initiating crawl...";
+      document.getElementById("status").innerHTML = '<span class="crawling-indicator"></span>Initiating crawl...';
+      controls.autoRotate = false;
 
-      await fetch("/api/crawl", {
+      const res = await fetch("/api/crawl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -449,6 +818,14 @@
           pages: parseInt(document.getElementById("pagesInput").value) || 60,
         }),
       });
+
+      const result = await res.json();
+      if (!res.ok) {
+        document.getElementById("status").innerHTML = `<span style="color:#f87171">${result.error}</span>`;
+        document.getElementById("startBtn").style.display = "";
+        document.getElementById("stopBtn").style.display = "none";
+        return;
+      }
 
       polling = true;
       setTimeout(pollGraph, 500);
@@ -462,40 +839,146 @@
       document.getElementById("status").innerHTML = "Crawl stopped.";
     };
 
+    window.resetCamera = function() {
+      camera.position.set(0, 100, 280);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    };
+
+    // ── Keyboard shortcuts ──────────────────────────────────────────
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT") return;
+
+      switch (e.key.toLowerCase()) {
+        case "r":
+          window.resetCamera();
+          break;
+        case "h":
+          const ui = document.getElementById("ui");
+          ui.style.display = ui.style.display === "none" ? "block" : "none";
+          break;
+        case "f":
+          if (hoveredNode && positions[hoveredNode.id]) {
+            const p = positions[hoveredNode.id];
+            // Account for mesh rotation
+            const rotY = pointsMesh ? pointsMesh.rotation.y : 0;
+            const rx = p.x * Math.cos(rotY) + p.z * Math.sin(rotY);
+            const rz = -p.x * Math.sin(rotY) + p.z * Math.cos(rotY);
+            controls.target.set(rx, p.y, rz);
+            camera.position.set(rx, p.y + 30, rz + 80);
+          }
+          break;
+      }
+    });
+
     // ── Mouse interaction ───────────────────────────────────────────
     const tooltip = document.getElementById("tooltip");
 
+    renderer.domElement.addEventListener("mousedown", () => { isDragging = false; });
     renderer.domElement.addEventListener("mousemove", (e) => {
+      if (e.buttons > 0) { isDragging = true; }
+
       mouse.x = (e.clientX / innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / innerHeight) * 2 + 1;
 
-      if (pointsMesh && graphNodes.length > 0) {
+      if (pointsMesh && graphNodes.length > 0 && !isDragging) {
         raycaster.setFromCamera(mouse, camera);
         const hits = raycaster.intersectObject(pointsMesh);
         if (hits.length > 0) {
           const idx = hits[0].index;
-          hoveredNode = graphNodes[idx];
-          tooltip.style.display = "block";
-          tooltip.style.left = e.clientX + 15 + "px";
-          tooltip.style.top = e.clientY + 15 + "px";
-          tooltip.querySelector(".tt-title").textContent = hoveredNode.title;
-          tooltip.querySelector(".tt-url").textContent = hoveredNode.url;
-          tooltip.querySelector(".tt-meta").textContent =
-            `Depth: ${hoveredNode.depth} · Links: ${hoveredNode.linkCount}`;
-          renderer.domElement.style.cursor = "pointer";
+          if (idx < graphNodes.length) {
+            hoveredNode = graphNodes[idx];
+            tooltip.style.display = "block";
+            tooltip.style.left = Math.min(e.clientX + 15, innerWidth - 360) + "px";
+            tooltip.style.top = Math.min(e.clientY + 15, innerHeight - 120) + "px";
+            tooltip.querySelector(".tt-title").textContent = hoveredNode.title;
+            tooltip.querySelector(".tt-url").textContent = hoveredNode.url;
+            tooltip.querySelector(".tt-desc").textContent = hoveredNode.description || "";
+            tooltip.querySelector(".tt-meta").textContent =
+              `Depth: ${hoveredNode.depth} · Links: ${hoveredNode.linkCount} · ${hoveredNode.domain}`;
+            renderer.domElement.style.cursor = "pointer";
+          }
         } else {
           hoveredNode = null;
           tooltip.style.display = "none";
           renderer.domElement.style.cursor = "grab";
         }
+      } else if (isDragging) {
+        tooltip.style.display = "none";
+        renderer.domElement.style.cursor = "grabbing";
       }
     });
 
-    renderer.domElement.addEventListener("click", () => {
-      if (hoveredNode) {
-        window.open(hoveredNode.url, "_blank");
+    renderer.domElement.addEventListener("mouseup", () => {
+      if (!isDragging && hoveredNode) {
+        window.open(hoveredNode.url, "_blank", "noopener");
       }
+      isDragging = false;
     });
+
+    // ── Minimap ─────────────────────────────────────────────────────
+    const minimapCanvas = document.getElementById("minimapCanvas");
+    const mmCtx = minimapCanvas.getContext("2d");
+    minimapCanvas.width = 160;
+    minimapCanvas.height = 160;
+
+    function drawMinimap() {
+      mmCtx.clearRect(0, 0, 160, 160);
+      if (graphNodes.length === 0) return;
+
+      // Find bounds
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const n of graphNodes) {
+        const p = positions[n.id];
+        if (!p) continue;
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.z < minZ) minZ = p.z;
+        if (p.z > maxZ) maxZ = p.z;
+      }
+
+      const rangeX = (maxX - minX) || 1;
+      const rangeZ = (maxZ - minZ) || 1;
+      const scale = 140 / Math.max(rangeX, rangeZ);
+
+      // Draw edges
+      mmCtx.strokeStyle = "rgba(110,231,255,0.08)";
+      mmCtx.lineWidth = 0.5;
+      for (const e of graphEdges) {
+        const pS = positions[e.source], pT = positions[e.target];
+        if (!pS || !pT) continue;
+        const x1 = 10 + (pS.x - minX) * scale;
+        const y1 = 10 + (pS.z - minZ) * scale;
+        const x2 = 10 + (pT.x - minX) * scale;
+        const y2 = 10 + (pT.z - minZ) * scale;
+        mmCtx.beginPath();
+        mmCtx.moveTo(x1, y1);
+        mmCtx.lineTo(x2, y2);
+        mmCtx.stroke();
+      }
+
+      // Draw nodes
+      for (const n of graphNodes) {
+        const p = positions[n.id];
+        if (!p) continue;
+        const x = 10 + (p.x - minX) * scale;
+        const y = 10 + (p.z - minZ) * scale;
+        const c = colorForDomain(n.domain);
+        mmCtx.fillStyle = `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},0.7)`;
+        mmCtx.beginPath();
+        mmCtx.arc(x, y, 1.5, 0, Math.PI*2);
+        mmCtx.fill();
+      }
+
+      // Camera indicator
+      mmCtx.strokeStyle = "rgba(255,255,255,0.4)";
+      mmCtx.lineWidth = 1;
+      const cx = 10 + (camera.position.x - minX) * scale;
+      const cy = 10 + (camera.position.z - minZ) * scale;
+      mmCtx.beginPath();
+      mmCtx.arc(cx, cy, 4, 0, Math.PI*2);
+      mmCtx.stroke();
+    }
 
     // ── Resize ──────────────────────────────────────────────────────
     window.addEventListener("resize", () => {
@@ -513,7 +996,7 @@
 
       controls.update();
 
-      // Apply forces every few frames to save CPU
+      // Apply forces every few frames
       if (frame % 3 === 0 && graphNodes.length > 1) {
         applyForces();
 
@@ -526,10 +1009,20 @@
             if (p) {
               posAttr.setXYZ(i, p.x, p.y, p.z);
             }
-            sizeAttr.setX(i, Math.min(3 + (graphNodes[i].linkCount || 0) * 0.8, 14));
+            sizeAttr.setX(i, Math.min(3.5 + (graphNodes[i].linkCount || 0) * 0.9, 16));
           }
           posAttr.needsUpdate = true;
           sizeAttr.needsUpdate = true;
+        }
+
+        // Update glow positions
+        if (glowMesh) {
+          const gPosAttr = glowMesh.geometry.getAttribute("position");
+          for (let i = 0; i < graphNodes.length; i++) {
+            const p = positions[graphNodes[i].id];
+            if (p) gPosAttr.setXYZ(i, p.x, p.y, p.z);
+          }
+          gPosAttr.needsUpdate = true;
         }
 
         // Update edges
@@ -550,8 +1043,17 @@
       }
 
       // Slow galaxy rotation
-      if (pointsMesh) pointsMesh.rotation.y += 0.0003;
-      if (edgesMesh) edgesMesh.rotation.y += 0.0003;
+      if (pointsMesh) pointsMesh.rotation.y += 0.0002;
+      if (edgesMesh) edgesMesh.rotation.y += 0.0002;
+      if (glowMesh) glowMesh.rotation.y += 0.0002;
+
+      // Update time uniform for shaders
+      if (pointsMesh && pointsMesh.material.uniforms) {
+        pointsMesh.material.uniforms.uTime.value = frame * 0.01;
+      }
+
+      // Minimap update (every 30 frames)
+      if (frame % 30 === 0) drawMinimap();
 
       composer.render();
     }

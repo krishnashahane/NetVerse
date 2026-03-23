@@ -1,16 +1,26 @@
 {
   "name": "netverse",
-  "version": "1.0.0",
-  "description": "3D galaxy visualization of crawled web links",
+  "version": "2.0.0",
+  "description": "3D galaxy visualization of crawled web links — explore the internet as an interactive cosmos",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "keywords": [],
+  "keywords": [
+    "web-crawler",
+    "3d-visualization",
+    "three.js",
+    "graph",
+    "network",
+    "galaxy"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "cheerio": "^1.2.0",
     "express": "^5.2.1",

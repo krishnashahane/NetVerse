@@ -1,159 +1,83 @@
-# 🕸️🌌 NetVerse
+# 🌌 Netverse
 
-**NetVerse** is a visual **Internet Atlas** that maps websites into a **3D galaxy of the web**.
+**Explore the internet as a 3D galaxy.** Netverse crawls websites, maps their link structure, and renders the web as an interactive cosmic visualization in real time.
 
-Instead of seeing the internet as pages and links, NetVerse transforms it into a **cosmic network** where:
+![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![Three.js](https://img.shields.io/badge/Three.js-0.162-blue) ![License](https://img.shields.io/badge/License-ISC-yellow)
 
-* Websites = **stars**
-* Links = **gravitational connections**
-* Clusters of sites = **galaxies**
+## Features
 
-Explore the web like an **astronomer exploring space**.
+- **Real-time 3D Web Visualization** — Watch the web unfold as a galaxy powered by Three.js with bloom effects, nebula clouds, and layered star fields
+- **Smart Web Crawler** — Breadth-first crawling with configurable depth (1-4), page limits (10-300), and polite rate limiting
+- **Force-Directed Layout** — Physics-based graph layout with repulsion, attraction, center gravity, and velocity clamping
+- **Interactive Exploration** — Orbit, zoom, click nodes to visit URLs, hover for details, search/filter by domain or keyword
+- **Domain Clustering** — Nodes colored by domain with a live domain legend showing distribution
+- **Statistics Dashboard** — Live metrics: nodes, edges, domains, errors, elapsed time
+- **Minimap** — Bird's-eye overview with camera position indicator
+- **Keyboard Shortcuts** — `R` reset view, `H` toggle UI, `F` focus on hovered node
 
----
-
-## 🚀 Features
-
-* 🌐 **Web Crawler Engine**
-  Automatically discovers websites and hyperlinks.
-
-* 🌌 **3D Internet Visualization**
-  Websites appear as nodes in a galaxy rendered with **Three.js**.
-
-* 🔗 **Hyperlink Mapping**
-  Shows relationships between websites.
-
-* 🧭 **Interactive Exploration**
-  Rotate, zoom, and navigate the internet in 3D space.
-
-* 📡 **Dynamic Graph Expansion**
-  The universe grows as the crawler discovers new nodes.
-
-* ⚡ **Real-Time Rendering**
-  Instant updates of newly crawled websites.
-
----
-
-## 🧠 Concept
-
-The internet is fundamentally a **graph network**:
-
-* **Nodes → Websites**
-* **Edges → Hyperlinks**
-
-NetVerse converts this structure into a **3D spatial graph** where websites behave like stars and link structures create constellations.
-
-Example link structure:
-
-```
-example.com
- ├── github.com
- ├── wikipedia.org
- └── openai.com
-```
-
-In **NetVerse**, this becomes a **cluster of stars connected by edges**.
-
----
-
-## 🏗 Tech Stack
-
-### Backend
-
-* **Node.js**
-* **Custom Web Crawler**
-* **Puppeteer / Axios + Cheerio**
-* Graph data storage (JSON / Redis / Neo4j optional)
-
-### Visualization
-
-* **Three.js**
-* **WebGL**
-* **Force-directed graph physics**
-
-### Optional Enhancements
-
-* WebSockets for **live crawl updates**
-* AI clustering for **topic-based galaxies**
-* Domain influence scoring
-* Internet timeline visualization
-
----
-
-## 📦 Installation
-
-Clone the repository:
+## Quick Start
 
 ```bash
-git clone https://github.com/yourusername/netverse
-cd netverse
+# Install dependencies
 npm install
-```
 
----
+# Start the server
+npm start
 
-## ▶️ Run the crawler
-
-Start discovering websites:
-
-```bash
-node crawler.js
-```
-
----
-
-## 🌍 Start the visualization server
-
-```bash
+# Or with auto-reload during development
 npm run dev
 ```
 
-Open in browser:
+Open **http://localhost:3000**, enter a URL, and hit **LAUNCH**.
+
+## Architecture
 
 ```
-http://localhost:3000
+┌─────────────────────────────────────────────────────┐
+│                   Frontend (Three.js)                │
+│  ┌───────────┐  ┌──────────┐  ┌─────────────────┐  │
+│  │ 3D Scene  │  │ Force    │  │ Interactive UI  │  │
+│  │ Renderer  │  │ Layout   │  │ Stats/Search    │  │
+│  │ + Bloom   │  │ Engine   │  │ Minimap/Legend  │  │
+│  └─────┬─────┘  └────┬─────┘  └───────┬─────────┘  │
+│        └──────────────┴────────────────┘            │
+│                    ↕ Poll /api/graph (800ms)         │
+├─────────────────────────────────────────────────────┤
+│                   Backend (Express.js)               │
+│  ┌───────────┐  ┌──────────┐  ┌─────────────────┐  │
+│  │ Crawler   │  │ Graph    │  │ API             │  │
+│  │ (BFS +    │  │ Builder  │  │ POST /api/crawl │  │
+│  │  cheerio) │  │ (Map +   │  │ POST /api/stop  │  │
+│  │           │  │  Set)    │  │ GET  /api/graph │  │
+│  │           │  │          │  │ GET  /api/stats │  │
+│  └───────────┘  └──────────┘  └─────────────────┘  │
+└─────────────────────────────────────────────────────┘
 ```
 
----
+## API Endpoints
 
-## ⚙️ How It Works
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/crawl` | Start a crawl (`{ url, depth, pages, delay }`) |
+| `POST` | `/api/stop` | Stop the active crawl |
+| `GET` | `/api/graph` | Get current graph (nodes + edges) |
+| `GET` | `/api/stats` | Get crawl statistics |
+| `GET` | `/api/health` | Health check |
 
-1. Start with **seed websites**
-2. Crawl pages and extract hyperlinks
-3. Store discovered nodes and edges
-4. Build a **graph structure**
-5. Render the graph using **Three.js**
-6. Each website appears as a **star in the NetVerse**
+## Configuration
 
----
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| Depth | 2 | 1-4 | How many link levels to follow |
+| Max Pages | 60 | 10-300 | Maximum pages to crawl |
+| Delay | 300ms | 100ms+ | Delay between requests |
 
-## 🌌 Vision
+## Tech Stack
 
-NetVerse aims to become a **visual map of the internet** — a way to explore how websites connect, grow, and influence each other.
+- **Backend:** Node.js, Express.js 5, Cheerio, node-fetch
+- **Frontend:** Three.js (WebGL), Custom GLSL shaders, ES Modules
+- **Layout:** Custom force-directed graph with physics simulation
 
-Think of it as:
+## License
 
-**Google Maps × Astronomy × The Internet**
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome.
-
-Ideas to explore:
-
-* better crawling strategies
-* performance improvements
-* visualization upgrades
-* data analysis features
-
----
-
-## 📜 License
-
-MIT License
-
----
-
-⭐ If you like the project, consider starring the repository.
+ISC
