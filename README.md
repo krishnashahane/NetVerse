@@ -80,4 +80,4 @@ Open **http://localhost:3000**, enter a URL, and hit **LAUNCH**.
 
 ## License
 
-ISC
+MIT
