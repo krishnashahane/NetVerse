@@ -1,7 +1,7 @@
 {
   "name": "netverse",
-  "version": "2.0.0",
-  "description": "3D galaxy visualization of crawled web links — explore the internet as an interactive cosmos",
+  "version": "2.0.1",
+  "description": "Interactive 3D web-link explorer with a bounded, SSRF-resistant crawler.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -16,14 +16,18 @@
     "galaxy"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
     "express": "^5.2.1",
     "node-fetch": "^2.7.0"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8",
+    "qs": "6.16.0"
   }
 }
