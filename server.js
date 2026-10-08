@@ -106,7 +106,7 @@ function isPrivateAddress(address) {
   const family = net.isIP(address);
   if (family === 4) return isPrivateIpv4(address);
   if (family === 6) return isPrivateIpv6(address);
-  return true;
+  return false;
 }
 
 function safeLookup(hostname, options, callback) {
@@ -437,6 +437,15 @@ function requestKey(req) {
 function crawlRateLimit(req, res, next) {
   const now = Date.now();
   const key = requestKey(req);
+
+  if (rateBuckets.size > 5000) {
+    for (const [bucketKey, bucket] of rateBuckets) {
+      if (now - bucket.startedAt >= RATE_WINDOW_MS) {
+        rateBuckets.delete(bucketKey);
+      }
+    }
+  }
+
   const bucket = rateBuckets.get(key);
 
   if (!bucket || now - bucket.startedAt >= RATE_WINDOW_MS) {
