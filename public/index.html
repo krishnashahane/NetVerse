@@ -688,10 +688,34 @@
 
         const statusEl = document.getElementById("status");
         if (data.crawling) {
-          statusEl.innerHTML = `<span class="crawling-indicator"></span>Crawling... <span class="count">${data.visited}</span> pages discovered`;
+          statusEl.replaceChildren();
+          const indicator = document.createElement("span");
+          indicator.className = "crawling-indicator";
+          const crawlCount = document.createElement("span");
+          crawlCount.className = "count";
+          crawlCount.textContent = String(data.visited);
+          statusEl.append(
+            indicator,
+            document.createTextNode("Crawling... "),
+            crawlCount,
+            document.createTextNode(" pages discovered"),
+          );
           setTimeout(pollGraph, 800);
         } else if (data.visited > 0) {
-          statusEl.innerHTML = `Complete — <span class="count">${data.visited}</span> pages mapped, <span class="count">${data.edges.length}</span> connections`;
+          statusEl.replaceChildren();
+          const completeCount = document.createElement("span");
+          completeCount.className = "count";
+          completeCount.textContent = String(data.visited);
+          const edgeCount = document.createElement("span");
+          edgeCount.className = "count";
+          edgeCount.textContent = String(data.edges.length);
+          statusEl.append(
+            document.createTextNode("Complete — "),
+            completeCount,
+            document.createTextNode(" pages mapped, "),
+            edgeCount,
+            document.createTextNode(" connections"),
+          );
           document.getElementById("startBtn").style.display = "";
           document.getElementById("stopBtn").style.display = "none";
           polling = false;
@@ -724,27 +748,45 @@
 
     function updateDomainLegend() {
       const container = document.getElementById("domainLegend");
-      if (graphNodes.length === 0) { container.style.display = "none"; return; }
-      container.style.display = "block";
+      if (graphNodes.length === 0) {
+        container.replaceChildren();
+        container.style.display = "none";
+        return;
+      }
 
+      container.style.display = "block";
       const domainCounts = {};
       for (const n of graphNodes) {
         domainCounts[n.domain] = (domainCounts[n.domain] || 0) + 1;
       }
 
-      const sorted = Object.entries(domainCounts).sort((a,b) => b[1] - a[1]).slice(0, 15);
+      const sorted = Object.entries(domainCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15);
 
-      container.innerHTML = sorted.map(([domain, count]) => {
-        const c = colorForDomain(domain);
-        const hex = '#' + c.getHexString();
-        return `<div class="domain-item" onclick="window.filterByDomain('${domain}')">
-          <div class="domain-dot" style="background:${hex}"></div>
-          <span class="domain-name">${domain}</span>
-          <span class="domain-count">${count}</span>
-        </div>`;
-      }).join('');
+      container.replaceChildren();
+      for (const [domain, count] of sorted) {
+        const color = colorForDomain(domain);
+        const item = document.createElement("div");
+        item.className = "domain-item";
+        item.addEventListener("click", () => window.filterByDomain(domain));
+
+        const dot = document.createElement("div");
+        dot.className = "domain-dot";
+        dot.style.background = "#" + color.getHexString();
+
+        const name = document.createElement("span");
+        name.className = "domain-name";
+        name.textContent = domain;
+
+        const countElement = document.createElement("span");
+        countElement.className = "domain-count";
+        countElement.textContent = String(count);
+
+        item.append(dot, name, countElement);
+        container.appendChild(item);
+      }
     }
-
     // ── Search / Filter ─────────────────────────────────────────────
     function applyFilter(query) {
       highlightFilter = query;
@@ -785,7 +827,9 @@
 
       // Basic URL validation
       try { new URL(url); } catch {
-        document.getElementById("status").innerHTML = '<span style="color:#f87171">Invalid URL format</span>';
+        const status = document.getElementById("status");
+        status.textContent = "Invalid URL format";
+        status.style.color = "#f87171";
         return;
       }
 
@@ -806,7 +850,12 @@
 
       document.getElementById("startBtn").style.display = "none";
       document.getElementById("stopBtn").style.display = "";
-      document.getElementById("status").innerHTML = '<span class="crawling-indicator"></span>Initiating crawl...';
+      const status = document.getElementById("status");
+      status.style.color = "";
+      status.replaceChildren();
+      const indicator = document.createElement("span");
+      indicator.className = "crawling-indicator";
+      status.append(indicator, document.createTextNode("Initiating crawl..."));
       controls.autoRotate = false;
 
       const res = await fetch("/api/crawl", {
@@ -821,7 +870,9 @@
 
       const result = await res.json();
       if (!res.ok) {
-        document.getElementById("status").innerHTML = `<span style="color:#f87171">${result.error}</span>`;
+        const status = document.getElementById("status");
+        status.textContent = result.error || "Request failed.";
+        status.style.color = "#f87171";
         document.getElementById("startBtn").style.display = "";
         document.getElementById("stopBtn").style.display = "none";
         return;
@@ -836,7 +887,9 @@
       polling = false;
       document.getElementById("startBtn").style.display = "";
       document.getElementById("stopBtn").style.display = "none";
-      document.getElementById("status").innerHTML = "Crawl stopped.";
+      const status = document.getElementById("status");
+      status.textContent = "Crawl stopped.";
+      status.style.color = "";
     };
 
     window.resetCamera = function() {
