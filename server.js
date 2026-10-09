@@ -13,6 +13,7 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const MAX_GRAPH_NODES = 5000;
+const MAX_GRAPH_EDGES = 20000;
 const MAX_CRAWL_DURATION = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_REDIRECTS = 5;
@@ -323,6 +324,7 @@ function addEdge(srcUrl, tgtUrl) {
   const target = nodes.get(tgtUrl);
 
   if (!source || !target || source.id === target.id) return;
+  if (edges.length >= MAX_GRAPH_EDGES) return;
 
   const key = String(source.id) + "->" + String(target.id);
   if (edgeSet.has(key)) return;
@@ -370,7 +372,7 @@ async function crawlPage(url, depth) {
     });
 
     for (const link of links) {
-      if (nodes.size >= MAX_GRAPH_NODES) break;
+      if (nodes.size >= MAX_GRAPH_NODES || edges.length >= MAX_GRAPH_EDGES) break;
 
       const target = addNode(link, domainOf(link), depth + 1);
       if (target) addEdge(finalUrl, link);
@@ -551,7 +553,7 @@ app.post("/api/crawl", crawlRateLimit, (req, res) => {
   });
 });
 
-app.post("/api/stop", (_req, res) => {
+app.post("/api/stop", crawlRateLimit, (_req, res) => {
   crawling = false;
   activeController?.abort();
   crawlStats.finishedAt = new Date().toISOString();
