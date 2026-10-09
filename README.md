@@ -26,6 +26,7 @@ Netverse is deliberately a **bounded public-web crawler**. It is not a general i
 - Crawl cancellation with request abort
 - Five-minute crawl timeout
 - 5,000-node graph safety cap
+- 20,000-edge graph safety cap
 - 2 MB per-page response cap
 
 ## Requirements
@@ -100,7 +101,7 @@ Netverse accepts arbitrary public URLs, so SSRF protection is a core security bo
 - Redirects are manual and revalidated
 - `file:`, `ftp:`, `gopher:`, and other non-HTTP schemes are rejected
 - Request bodies are capped at 32 KB
-- Crawl-control endpoints are rate-limited
+- Crawl start/stop endpoints are rate-limited
 - Response bodies are capped before parsing
 - Graph growth is bounded
 - Temporary network requests are abortable
