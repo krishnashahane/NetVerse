@@ -599,27 +599,35 @@
       const centerGravity = 0.001;
       const dampingFactor = 0.82;
 
-      // Repulsion between all nodes
+      // Exact all-pairs repulsion is useful for small graphs. For large
+      // crawls, sample a bounded neighbourhood to avoid O(n²) frame stalls.
+      const exactRepulsion = count <= 350;
+      const sampledNeighbours = Math.min(32, count - 1);
+      const repulsionScale = exactRepulsion ? 1 : 0.5;
+
       for (let i = 0; i < count; i++) {
         const a = graphNodes[i];
         const pA = positions[a.id];
         if (!pA) continue;
 
-        // Center gravity (prevents graph from drifting)
         const vA = velocities[a.id];
         vA.x -= pA.x * centerGravity;
         vA.y -= pA.y * centerGravity;
         vA.z -= pA.z * centerGravity;
 
-        for (let j = i + 1; j < count; j++) {
+        const neighbours = exactRepulsion ? count - i - 1 : sampledNeighbours;
+        for (let offset = 1; offset <= neighbours; offset++) {
+          const j = exactRepulsion ? i + offset : (i + offset) % count;
+          if (j === i) continue;
+
           const b = graphNodes[j];
           const pB = positions[b.id];
           if (!pB) continue;
 
           const dx = pA.x - pB.x, dy = pA.y - pB.y, dz = pA.z - pB.z;
           const distSq = dx * dx + dy * dy + dz * dz;
-          if (distSq < 0.01) continue; // skip overlapping nodes
-          const force = repulsionStrength / (distSq + 1);
+          if (distSq < 0.01) continue;
+          const force = repulsionStrength / (distSq + 1) * repulsionScale;
 
           const vB = velocities[b.id];
           vA.x += dx * force; vA.y += dy * force; vA.z += dz * force;

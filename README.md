@@ -1,62 +1,41 @@
-# Netverse
+# NetVerse
 
-Netverse is a local Node.js application that crawls public web pages and visualizes the discovered hyperlink graph as an interactive 3D galaxy.
+NetVerse is a bounded public-web crawler that visualizes discovered hyperlinks as an interactive 3D galaxy. It uses Node.js, Express, Cheerio, and Three.js.
 
-## How it works
-
-1. You provide an HTTP or HTTPS seed URL.
-2. The server validates the target and resolves DNS before making the request.
-3. Private, loopback, link-local, multicast, documentation, and other reserved IP ranges are blocked.
-4. Redirects are followed manually with a strict five-hop limit; every redirect is validated again.
-5. Only HTML/XHTML responses are parsed, with a 2 MB response-body limit.
-6. Cheerio extracts links, titles, and descriptions.
-7. The crawler follows links breadth-first up to the configured depth/page limit.
-8. The browser polls the graph API and renders nodes, edges, domains, search results, statistics, and a minimap with Three.js.
-
-Netverse is deliberately a **bounded public-web crawler**. It is not a general internet scanner and does not attempt to access private infrastructure.
+NetVerse is intended for sites you are authorized to crawl. It is not a general internet scanner and is designed to reject private and special-purpose network destinations.
 
 ## Features
 
-- Interactive Three.js 3D graph
-- Breadth-first crawling
-- Configurable depth (1–4) and page count (1–300)
-- Configurable polite request delay (100–5000 ms)
-- Domain clustering and live statistics
-- Search/filter and node inspection
-- Crawl cancellation with request abort
-- Five-minute crawl timeout
-- 5,000-node graph safety cap
-- 20,000-edge graph safety cap
-- 2 MB per-page response cap
+- Interactive Three.js graph with domain colouring, search, node inspection, statistics, and a minimap.
+- Breadth-first crawling with configurable depth, page count, and polite delay.
+- Manual redirect handling; every redirect is revalidated before the next request.
+- DNS resolution validation at connection time to reduce DNS-rebinding and SSRF exposure.
+- Bounded response sizes, per-page link extraction, crawl duration, graph nodes, and graph edges.
+- Crawl cancellation and request timeouts.
+- Rate-limited crawl control endpoints.
+- No database or account system; a single in-memory crawl is shared by the running process.
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 22 or newer
 - npm
 
-Cheerio 1.2.0 currently requires Node 20.18.1+, so the project targets Node 22 for a current supported runtime. citeturn449058search0turn449058search2
+## Run locally
 
-## Installation
-
-~~~bash
-git clone https://github.com/krishnashahane/netverse.git
-cd netverse
-npm install
-~~~
-
-Run the application:
-
-~~~bash
+```bash
+git clone https://github.com/krishnashahane/NetVerse.git
+cd NetVerse
+npm ci
 npm start
-~~~
+```
+
+Open [http://localhost:3000](http://localhost:3000).
 
 Development mode:
 
-~~~bash
+```bash
 npm run dev
-~~~
-
-Open `http://localhost:3000`.
+```
 
 ## API
 
@@ -65,89 +44,77 @@ Open `http://localhost:3000`.
 | GET | `/api/health` | Health check |
 | POST | `/api/crawl` | Start a bounded crawl |
 | POST | `/api/stop` | Stop the active crawl and abort the current request |
-| GET | `/api/graph` | Return current nodes and edges |
+| GET | `/api/graph` | Return current graph nodes and edges |
 | GET | `/api/stats` | Return crawl statistics |
 
-### Start a crawl
+Start a crawl:
 
-~~~json
-{
-  "url": "https://example.com",
-  "depth": 2,
-  "pages": 60,
-  "delay": 300
-}
-~~~
+```bash
+curl -X POST http://localhost:3000/api/crawl \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","depth":2,"pages":60,"delay":300}'
+```
 
-### Limits
+## Resource limits
 
-- Depth: 1–4
-- Pages: 1–300
-- Delay: 100–5000 ms
-- HTML response: 2 MB
-- Graph: 5,000 nodes
-- Redirects: 5 per page
-- Crawl runtime: 5 minutes
-- Crawl start/stop requests: 10 per minute per client
+| Resource | Limit |
+|---|---:|
+| JSON request body | 32 KB |
+| Seed/normalized URL | 2,048 characters |
+| Crawl depth | 1–4 |
+| Pages visited | 1–300 |
+| Delay between pages | 100–5,000 ms |
+| Redirects per page | 5 |
+| Request timeout | 8 seconds |
+| Crawl duration | 5 minutes |
+| HTML response body | 2 MB |
+| Links considered per page | 1,000 |
+| Graph nodes | 5,000 |
+| Graph edges | 20,000 |
+| Rate-limit buckets per process | 5,000 |
+| Crawl start/stop requests per client | 10 per minute |
+
+The 3D force layout uses exact all-pairs repulsion for smaller graphs and bounded neighbour sampling above 350 nodes. This keeps the high-node-count view responsive at the cost of approximate physical layout.
 
 ## Security
 
-Netverse accepts arbitrary public URLs, so SSRF protection is a core security boundary.
+Arbitrary URL fetching makes SSRF prevention a critical boundary.
 
-- HTTP and HTTPS only
-- URL credentials are rejected
-- DNS results are checked for private/reserved addresses
-- The actual HTTP(S) agents use the same DNS safety check at connection time
-- Redirects are manual and revalidated
-- `file:`, `ftp:`, `gopher:`, and other non-HTTP schemes are rejected
-- Request bodies are capped at 32 KB
-- Crawl start/stop endpoints are rate-limited
-- Response bodies are capped before parsing
-- Graph growth is bounded
-- Temporary network requests are abortable
-- Express fingerprinting is disabled
-- Security response headers are set
-- Frontend crawl data/errors are rendered with DOM APIs rather than interpolated into `innerHTML`
+- Only HTTP and HTTPS targets are accepted.
+- URL credentials, oversized URLs, private IPs, and special-purpose addresses are rejected.
+- IPv4 and IPv6 checks include loopback, private, link-local, shared, documentation, multicast, reserved, IPv4-mapped IPv6, 6to4, and other non-global ranges.
+- DNS lookups reject a hostname if any returned address is private/reserved. The HTTP(S) agents use the same validation at connection time.
+- Redirects are handled manually, limited to five hops, and revalidated.
+- Response bodies are bounded while streaming; oversized or failed streams are destroyed.
+- ZIP files are not accepted; repository crawling fetches public HTTP(S) pages only.
+- Crawl control endpoints have bounded per-process rate-limit state.
+- Graph, response, request, and link-extraction growth is bounded.
+- Security headers are applied before static content and API routes.
+- Express fingerprinting is disabled; malformed/oversized JSON receives structured client errors.
+- Browser-controlled text is written through DOM text APIs rather than interpolated as HTML.
 
-### Dependency hardening
+The address policy deliberately blocks special-use ranges conservatively. Network access controls are defense-in-depth; deploy behind an egress firewall that independently denies private, metadata, and reserved destinations.
 
-The lockfile is overridden to patched `proxy-addr` 2.0.8 and `qs` 6.16.0. `proxy-addr` versions before 2.0.8 have a critical IPv4-mapped-IPv6 trust-subnet spoofing issue (CVE-2026-90711). citeturn928461search1
+## Deployment model and limitations
 
-`qs` versions through 6.15.3 are affected by two 2026 denial-of-service/limit-bypass advisories; 6.16.0 is the patched release. citeturn928461search0turn928461search5
+- The graph and crawl controller are process-local and shared by all visitors of that process. Only one crawl may run at a time.
+- Restarting the server clears the graph.
+- Multiple instances do not share crawl state. A multi-instance deployment needs a job queue and shared state store, plus distributed rate limiting.
+- The crawler does not implement `robots.txt` enforcement. Respect each site's terms, crawl policy, and request limits.
+- HTML extraction is limited to a 2 MB response and a fixed number of links per page.
 
-## Important crawler behavior
+For production deployment, use a reverse proxy with TLS, connection/request timeouts, an egress firewall, process supervision, structured logs, metrics, and alerting. Configure the platform's trusted proxy settings only when the application is actually behind a controlled proxy; otherwise use the direct socket address for rate limiting.
 
-Netverse removes URL fragments and query strings before graphing pages. It also deduplicates nodes and edges.
+## Tests
 
-The crawler does not currently implement robots.txt enforcement. Use it only against sites you are authorized to crawl and keep the configured request delay respectful.
-
-Because the graph is held in process memory, restarting the server clears the current crawl.
-
-## Testing
-
-Run the local smoke tests:
-
-~~~bash
+```bash
+npm ci
 npm test
-~~~
+npm audit --audit-level=high
+```
 
-The smoke test verifies that the server starts, `/api/health` works, private `127.0.0.1` targets are rejected, and non-HTTP schemes are rejected.
-
-## Project structure
-
-~~~text
-netverse/
-├── public/
-│   └── index.html
-├── server.js
-├── package.json
-├── package-lock.json
-├── test/
-│   └── smoke.js
-├── .gitignore
-└── LICENSE
-~~~
+The suite checks network-address policy, URL normalization, API validation, error handling, security headers, and the original server smoke checks. GitHub Actions runs on Node.js 22 and 24.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
