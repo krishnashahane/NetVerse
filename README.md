@@ -117,4 +117,4 @@ The suite checks network-address policy, URL normalization, API validation, erro
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT.
