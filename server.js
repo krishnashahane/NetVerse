@@ -1,12 +1,15 @@
 const express = require("express");
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
-const dns = require("dns");
 const http = require("http");
 const https = require("https");
-const net = require("net");
 const path = require("path");
 const { URL } = require("url");
+const {
+  normalizeUrl,
+  safeLookup,
+  validateTargetUrl,
+} = require("./lib/network-policy");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -19,141 +22,11 @@ const REQUEST_TIMEOUT_MS = 8000;
 const MAX_REDIRECTS = 5;
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT = 10;
+const MAX_RATE_BUCKETS = 5000;
+const MAX_LINKS_PER_PAGE = 1000;
 
 const rateBuckets = new Map();
 let activeController = null;
-
-function ipv4ToNumber(address) {
-  const parts = address.split(".").map(Number);
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
-  ) {
-    return null;
-  }
-  return (
-    parts[0] * 0x1000000 +
-    parts[1] * 0x10000 +
-    parts[2] * 0x100 +
-    parts[3]
-  );
-}
-
-function isPrivateIpv4(address) {
-  const value = ipv4ToNumber(address);
-  if (value === null) return true;
-
-  return (
-    value <= 0x00ffffff ||
-    (value >= 0x0a000000 && value <= 0x0affffff) ||
-    (value >= 0x64400000 && value <= 0x647fffff) ||
-    (value >= 0x7f000000 && value <= 0x7fffffff) ||
-    (value >= 0xa9fe0000 && value <= 0xa9feffff) ||
-    (value >= 0xac100000 && value <= 0xac1fffff) ||
-    (value >= 0xc0000000 && value <= 0xc00000ff) ||
-    (value >= 0xc0000200 && value <= 0xc00002ff) ||
-    (value >= 0xc0a80000 && value <= 0xc0a8ffff) ||
-    (value >= 0xc6120000 && value <= 0xc613ffff) ||
-    (value >= 0xc6336400 && value <= 0xc63364ff) ||
-    (value >= 0xcb007100 && value <= 0xcb0071ff) ||
-    value >= 0xe0000000
-  );
-}
-
-function ipv4FromMappedIpv6(address) {
-  const normalized = address.toLowerCase();
-  if (!normalized.startsWith("::ffff:")) return null;
-
-  const suffix = normalized.slice(7);
-  if (suffix.includes(".")) return suffix;
-
-  const pieces = suffix.split(":");
-  if (pieces.length !== 2) return null;
-
-  const high = Number.parseInt(pieces[0], 16);
-  const low = Number.parseInt(pieces[1], 16);
-  if (!Number.isInteger(high) || !Number.isInteger(low)) return null;
-
-  return [
-    (high >> 8) & 255,
-    high & 255,
-    (low >> 8) & 255,
-    low & 255,
-  ].join(".");
-}
-
-function isPrivateIpv6(address) {
-  const normalized = address.toLowerCase();
-  const mapped = ipv4FromMappedIpv6(normalized);
-  if (mapped) return isPrivateIpv4(mapped);
-
-  if (normalized === "::" || normalized === "::1") return true;
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
-  if (
-    normalized.startsWith("fe8") ||
-    normalized.startsWith("fe9") ||
-    normalized.startsWith("fea") ||
-    normalized.startsWith("feb")
-  ) {
-    return true;
-  }
-  if (normalized.startsWith("ff")) return true;
-  if (normalized.startsWith("2001:db8:")) return true;
-
-  return false;
-}
-
-function isPrivateAddress(address) {
-  const family = net.isIP(address);
-  if (family === 4) return isPrivateIpv4(address);
-  if (family === 6) return isPrivateIpv6(address);
-  return false;
-}
-
-function safeLookup(hostname, options, callback) {
-  dns.lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
-    if (error) return callback(error);
-
-    if (
-      !addresses.length ||
-      addresses.some((entry) => isPrivateAddress(entry.address))
-    ) {
-      return callback(new Error("Blocked private or reserved network address."));
-    }
-
-    const selected = addresses[0];
-    return callback(null, selected.address, selected.family);
-  });
-}
-
-const httpAgent = new http.Agent({ keepAlive: true, lookup: safeLookup });
-const httpsAgent = new https.Agent({ keepAlive: true, lookup: safeLookup });
-
-function agentFor(url) {
-  return new URL(url).protocol === "https:" ? httpsAgent : httpAgent;
-}
-
-function validateTargetUrl(rawUrl) {
-  const target = new URL(rawUrl);
-
-  if (!["http:", "https:"].includes(target.protocol)) {
-    throw new Error("Only HTTP and HTTPS URLs are allowed.");
-  }
-
-  if (target.username || target.password) {
-    throw new Error("URLs with embedded credentials are not allowed.");
-  }
-
-  if (!target.hostname) {
-    throw new Error("URL hostname is required.");
-  }
-
-  if (isPrivateAddress(target.hostname)) {
-    throw new Error("Private and reserved network targets are blocked.");
-  }
-
-  return target;
-}
 
 function domainOf(url) {
   try {
@@ -185,29 +58,32 @@ function normalizeUrl(href, base) {
 }
 
 async function readLimitedText(response, maxBytes) {
-  const declared = Number.parseInt(
-    response.headers.get("content-length") || "",
-    10,
-  );
+  const declaredHeader = response.headers.get("content-length");
+  const declared = declaredHeader === null ? null : Number(declaredHeader);
 
-  if (Number.isFinite(declared) && declared > maxBytes) {
+  if (declared !== null && Number.isFinite(declared) && declared > maxBytes) {
+    response.body?.destroy();
     throw new Error("Response body exceeds the size limit.");
   }
 
   const chunks = [];
   let total = 0;
 
-  for await (const chunk of response.body) {
-    total += chunk.length;
-
-    if (total > maxBytes) {
-      throw new Error("Response body exceeds the size limit.");
+  try {
+    for await (const chunk of response.body) {
+      total += chunk.length;
+      if (total > maxBytes) {
+        response.body?.destroy();
+        throw new Error("Response body exceeds the size limit.");
+      }
+      chunks.push(chunk);
     }
-
-    chunks.push(chunk);
+  } catch (error) {
+    response.body?.destroy();
+    throw error;
   }
 
-  return Buffer.concat(chunks).toString("utf8");
+  return Buffer.concat(chunks, total).toString("utf8");
 }
 
 async function fetchHtml(startUrl) {
@@ -366,9 +242,11 @@ async function crawlPage(url, depth) {
     const links = new Set();
 
     $("a[href]").each((_, element) => {
+      if (links.size >= MAX_LINKS_PER_PAGE) return false;
       const href = $(element).attr("href");
       const resolved = normalizeUrl(href, finalUrl);
       if (resolved) links.add(resolved);
+      return undefined;
     });
 
     for (const link of links) {
@@ -436,34 +314,42 @@ function requestKey(req) {
   return req.socket?.remoteAddress || "unknown";
 }
 
+function pruneRateBuckets(now) {
+  for (const [key, bucket] of rateBuckets) {
+    if (now - bucket.startedAt >= RATE_WINDOW_MS) {
+      rateBuckets.delete(key);
+    }
+  }
+}
+
 function crawlRateLimit(req, res, next) {
   const now = Date.now();
   const key = requestKey(req);
-
-  if (rateBuckets.size > 5000) {
-    for (const [bucketKey, bucket] of rateBuckets) {
-      if (now - bucket.startedAt >= RATE_WINDOW_MS) {
-        rateBuckets.delete(bucketKey);
-      }
-    }
-  }
-
-  const bucket = rateBuckets.get(key);
+  let bucket = rateBuckets.get(key);
 
   if (!bucket || now - bucket.startedAt >= RATE_WINDOW_MS) {
-    rateBuckets.set(key, { startedAt: now, count: 1 });
+    if (bucket) rateBuckets.delete(key);
+    pruneRateBuckets(now);
+
+    // Keep the per-process limiter bounded even if many source IPs appear.
+    if (rateBuckets.size >= MAX_RATE_BUCKETS) {
+      const oldestKey = rateBuckets.keys().next().value;
+      if (oldestKey !== undefined) rateBuckets.delete(oldestKey);
+    }
+
+    bucket = { startedAt: now, count: 1 };
+    rateBuckets.set(key, bucket);
     return next();
   }
+
+  // Refresh insertion order so the oldest live bucket can be evicted safely.
+  rateBuckets.delete(key);
+  rateBuckets.set(key, bucket);
 
   if (bucket.count >= RATE_LIMIT) {
     res.setHeader(
       "Retry-After",
-      String(
-        Math.max(
-          1,
-          Math.ceil((RATE_WINDOW_MS - (now - bucket.startedAt)) / 1000),
-        ),
-      ),
+      String(Math.max(1, Math.ceil((RATE_WINDOW_MS - (now - bucket.startedAt)) / 1000))),
     );
     return res
       .status(429)
@@ -475,28 +361,56 @@ function crawlRateLimit(req, res, next) {
 }
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "32kb" }));
-app.use(express.static(path.join(__dirname, "public")));
 
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
   res.setHeader(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()",
   );
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-      "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; " +
-      "object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+    "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; " +
+      "connect-src 'self'; object-src 'none'; base-uri 'self'; " +
+      "form-action 'self'; frame-ancestors 'none'",
   );
+  if (req.path.startsWith("/api/")) {
+    res.setHeader("Cache-Control", "no-store");
+  } else {
+    res.setHeader("Cache-Control", "no-cache");
+  }
   next();
 });
 
+app.use(express.json({ limit: "32kb", strict: true }));
+app.use(express.static(path.join(__dirname, "public"), {
+  etag: true,
+  maxAge: 0,
+  fallthrough: true,
+}));
+
+function boundedInteger(value, fallback, minimum, maximum, name) {
+  if (value === undefined || value === null) return fallback;
+  const parsed = typeof value === "number" ? value :
+    (typeof value === "string" && value.trim() !== "" ? Number(value) : NaN);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(name + " must be a whole number.");
+  }
+  return Math.min(maximum, Math.max(minimum, parsed));
+}
+
 app.post("/api/crawl", crawlRateLimit, (req, res) => {
-  const { url, depth, pages, delay } = req.body || {};
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "A JSON object is required." });
+  }
+
+  const { url, depth, pages, delay } = req.body;
 
   if (typeof url !== "string" || !url.trim()) {
     return res.status(400).json({ error: "url is required" });
@@ -520,22 +434,13 @@ app.post("/api/crawl", crawlRateLimit, (req, res) => {
     return res.status(400).json({ error: "Invalid crawl URL." });
   }
 
-  const requestedDepth = Number(depth);
-  const requestedPages = Number(pages);
-  const requestedDelay = Number(delay);
-
-  maxDepth = Math.min(
-    Math.max(Number.isFinite(requestedDepth) ? requestedDepth : 2, 1),
-    4,
-  );
-  maxPages = Math.min(
-    Math.max(Number.isFinite(requestedPages) ? requestedPages : 60, 1),
-    300,
-  );
-  crawlDelay = Math.min(
-    Math.max(Number.isFinite(requestedDelay) ? requestedDelay : 300, 100),
-    5000,
-  );
+  try {
+    maxDepth = boundedInteger(depth, 2, 1, 4, "depth");
+    maxPages = boundedInteger(pages, 60, 1, 300, "pages");
+    crawlDelay = boundedInteger(delay, 300, 100, 5000, "delay");
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 
   runCrawl(normalizedSeed).catch((error) => {
     console.error("Crawl failed:", error.message);
@@ -594,12 +499,38 @@ app.get("/api/health", (_req, res) => {
   return res.json({ status: "ok", uptime: process.uptime() });
 });
 
+app.use((req, res) => {
+  res.status(404).json({ error: "Not found." });
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+
+  if (error && error.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request body exceeds the 32 KB limit." });
+  }
+  if (error && error.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Malformed JSON request body." });
+  }
+
+  console.error("Unhandled request error:", error?.message || "unknown error");
+  return res.status(500).json({ error: "Internal server error." });
+});
+
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(
-      "\\n  Netverse running at http://localhost:" + String(PORT) + "\\n",
-    );
+  const server = app.listen(PORT, () => {
+    console.log("\\n  Netverse running at http://localhost:" + String(PORT) + "\\n");
   });
+
+  const shutdown = () => {
+    crawling = false;
+    activeController?.abort();
+    server.close(() => process.exit(0));
+    server.closeIdleConnections?.();
+  };
+
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
 }
 
 module.exports = app;
