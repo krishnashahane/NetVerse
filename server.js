@@ -36,27 +36,6 @@ function domainOf(url) {
   }
 }
 
-function normalizeUrl(href, base) {
-  try {
-    const u = new URL(href, base);
-
-    if (!["http:", "https:"].includes(u.protocol)) return null;
-    if (u.username || u.password) return null;
-    if (isPrivateAddress(u.hostname)) return null;
-
-    u.hash = "";
-    u.search = "";
-
-    let normalized = u.toString();
-    if (normalized.endsWith("/") && normalized.length > u.origin.length + 1) {
-      normalized = normalized.slice(0, -1);
-    }
-    return normalized;
-  } catch {
-    return null;
-  }
-}
-
 async function readLimitedText(response, maxBytes) {
   const declaredHeader = response.headers.get("content-length");
   const declared = declaredHeader === null ? null : Number(declaredHeader);
